@@ -5,11 +5,19 @@ namespace MyTest;
 
 public static class Assert
 {
-    public static void AreEqual(object expected, object actual)
+    public static void AreEqual(object? expected, object? actual)
     {
         if (!Equals(expected, actual))
         {
             throw new TestFailedException($"Assert.AreEqual failed. Expected: <{expected}>. Actual: <{actual}>.");
+        }
+    }
+
+    public static void AreNotEqual(object? expected, object? actual)
+    {
+        if (Equals(expected, actual))
+        {
+            throw new TestFailedException($"Assert.AreNotEqual failed. Expected: <{expected}>. Actual: <{actual}>.");
         }
     }
 

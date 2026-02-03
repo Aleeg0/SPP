@@ -9,6 +9,7 @@ public class TestLauncher
     private const ConsoleColor SuccessColor = ConsoleColor.Green;
     private const ConsoleColor TestErrorColor = ConsoleColor.Red;
     private const ConsoleColor CriticalErrorColor = ConsoleColor.DarkRed;
+    private const ConsoleColor SkippedColor = ConsoleColor.Cyan;
 
     public void LaunchTest(Assembly assembly)
     {
@@ -92,7 +93,18 @@ public class TestLauncher
 
         if (dataRows.Count != 0)
         {
-            dataRows.ForEach(dataRow => Invoke(instance, method, dataRow.Values));
+            dataRows.ForEach(dataRow =>
+                {
+                    if (dataRow.IgnoreMessage != null)
+                    {
+                        PrintSkipped(method.Name, dataRow.IgnoreMessage);
+                    }
+                    else
+                    {
+                        Invoke(instance, method, dataRow.Values);
+                    }
+                }
+            );
         }
         else
         {
@@ -102,7 +114,9 @@ public class TestLauncher
 
     private void Invoke(object instance, MethodInfo method, object[]? args)
     {
-        Console.Write($"{method.Name}: ");
+        var dataRows = method.GetCustomAttributes<TestMethodAttribute>().FirstOrDefault()!;
+        var descriptionString = dataRows.Description != null ? $"({dataRows.Description})" : "";
+        Console.Write($"{method.Name}{descriptionString}: ");
 
         try
         {
@@ -132,6 +146,15 @@ public class TestLauncher
         Console.ForegroundColor = prevColor;
     }
 
+    private void PrintSkipped(string methodName, string message)
+    {
+        var prevColor = Console.ForegroundColor;
+        Console.ForegroundColor = SkippedColor;
+        Console.Write($"{methodName}: SKIPPED. ");
+        Console.ForegroundColor = prevColor;
+        Console.WriteLine(message);
+    }
+
     private void HandleTestException(Exception ex)
     {
         var prevColor = Console.ForegroundColor;
@@ -139,7 +162,7 @@ public class TestLauncher
         if (ex is TestFailedException)
         {
             Console.ForegroundColor = TestErrorColor;
-            Console.Write($"FAILED. {ex.Message}");
+            Console.WriteLine($"FAILED. {ex.Message}");
         }
         else
         {
