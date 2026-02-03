@@ -21,6 +21,14 @@ public static class Assert
         }
     }
 
+    public static void IsFalse(bool condition)
+    {
+        if (condition)
+        {
+            throw new TestFailedException("Assert.IsFalse failed.");
+        }
+    }
+
     public static void Contains(object expected, IEnumerable collection)
     {
         if (collection == null)
@@ -30,13 +38,31 @@ public static class Assert
 
         foreach (var item in collection)
         {
-            if (Equals(item, expected))
+            if (Equals(expected, item))
             {
                 return;
             }
         }
 
         throw new TestFailedException($"Assert.Contains failure. Not found: <{expected}> in collection.");
+    }
+
+    public static void Contains<T>(IEnumerable<T> collection, Func<T, bool> predicate)
+    {
+        if (collection == null)
+        {
+            throw new TestFailedException("Assert.Contains failure. Collection is null.");
+        }
+
+        foreach (var item in collection)
+        {
+            if (predicate(item))
+            {
+                return;
+            }
+        }
+
+        throw new TestFailedException("Assert.Contains failure. No item found matching the predicate.");
     }
 
     public static void DoesNotContains(object notExpected, IEnumerable collection)
@@ -51,6 +77,22 @@ public static class Assert
             if (Equals(item, notExpected))
             {
                 throw new TestFailedException($"Assert.DoesNotContains failure. Found: <{notExpected}> in collection.");
+            }
+        }
+    }
+
+    public static void DoesNotContains<T>(IEnumerable<T> collection, Func<T, bool> predicate)
+    {
+        if (collection == null)
+        {
+            throw new TestFailedException("Assert.DoesNotContains failure. Collection is null.");
+        }
+
+        foreach (var item in collection)
+        {
+            if (predicate(item))
+            {
+                throw new TestFailedException($"Assert.DoesNotContains failure. Collection is null.");
             }
         }
     }

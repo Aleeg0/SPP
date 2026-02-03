@@ -44,26 +44,34 @@ public class TestLauncher
             return;
         }
 
-        // [TODO]: Здесь в будущем вызовем методы с [ClassInitialize]
+        var classInitializeMethod = testClass.GetMethods(BindingFlags.Static | BindingFlags.Public)
+            .SingleOrDefault(m => m.GetCustomAttribute<ClassInitializeAttribute>() != null);
+
+        var testInitializeMethod = testClass.GetMethods()
+            .SingleOrDefault(m => m.GetCustomAttribute<TestInitializeAttribute>() != null);
+
+        var testCleanupMethod = testClass.GetMethods()
+            .SingleOrDefault(m => m.GetCustomAttribute<TestCleanupAttribute>() != null);
+
+        classInitializeMethod?.Invoke(null, null);
 
         var methods = testClass.GetMethods()
             .Where(m => m.GetCustomAttribute<TestMethodAttribute>() != null)
             .ToList();
 
-        methods.ForEach(m => RunTestMethod(instance, m));
+        methods.ForEach(m => RunTestMethod(instance, m, testInitializeMethod, testCleanupMethod));
 
-        // [TODO]: Здесь в будущем вызовем методы с [ClassCleanup]
+        var classCleanupMethod = testClass.GetMethods(BindingFlags.Static | BindingFlags.Public)
+            .SingleOrDefault(m => m.GetCustomAttribute<ClassCleanupAttribute>() != null);
 
-        // [TODO]: я бы ещё реализовал IDisposable
+        classCleanupMethod?.Invoke(null, null);
 
         Console.WriteLine();
     }
 
-    private void RunTestMethod(object instance, MethodInfo method)
+    private void RunTestMethod(object instance, MethodInfo method, MethodInfo? init, MethodInfo? cleanup)
     {
-        // [TODO]: Поиск и запуск метода [TestInitialize]
-        // Например: FindMethodWithAttribute<TestInitializeAttribute>(instance)?.Invoke(...)
-
+        init?.Invoke(instance, null);
         try
         {
             ExecuteTestMethod(instance, method);
@@ -74,19 +82,22 @@ public class TestLauncher
         }
         finally
         {
-            // [TODO]: Поиск и запуск метода [TestCleanup]
-            // Например: FindMethodWithAttribute<TestCleanupAttribute>(instance)?.Invoke(...)
+            cleanup?.Invoke(instance, null);
         }
     }
 
     private void ExecuteTestMethod(object instance, MethodInfo method)
     {
-        // [TODO]: Проверка на наличие атрибутов [DataRow]
-        // var dataRows = method.GetCustomAttributes<DataRowAttribute>();
-        // ЕСЛИ DataRow есть:
-        //   Цикл foreach по строкам данных -> вызов InvokeCore(instance, method, rowArgs)
+        var dataRows = method.GetCustomAttributes<DataRowAttribute>().ToList();
 
-        Invoke(instance, method, null);
+        if (dataRows.Count != 0)
+        {
+            dataRows.ForEach(dataRow => Invoke(instance, method, dataRow.Values));
+        }
+        else
+        {
+            Invoke(instance, method, null);
+        }
     }
 
     private void Invoke(object instance, MethodInfo method, object[]? args)
