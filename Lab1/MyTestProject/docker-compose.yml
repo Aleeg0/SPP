@@ -1,0 +1,18 @@
+version: '3.9'
+
+services:
+  postgres-test:
+    image: postgres:latest
+    container_name: test-postgres
+    environment:
+      POSTGRES_DB: Test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 3214
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  postgres_test_data:

@@ -4,7 +4,7 @@ using MyProject.repositories.Interfaces;
 
 namespace MyProject.repositories.Implementations;
 
-public class UserInMemoryRepository : IUserRepository
+public class UserInMemoryInMemoryRepository : IUserInMemoryRepository
 {
     private readonly Dictionary<int, User> _users = new();
 

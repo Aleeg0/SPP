@@ -3,7 +3,7 @@ using MyProject.entities;
 
 namespace MyProject.repositories.Interfaces;
 
-public interface IUserRepository
+public interface IUserInMemoryRepository
 {
     public User? GetById(int id);
     public List<User> GetAll();

@@ -105,7 +105,7 @@ public static class Assert
         }
     }
 
-    public static void IsNull(object actual)
+    public static void IsNull(object? actual)
     {
         if (actual != null)
         {
@@ -113,7 +113,7 @@ public static class Assert
         }
     }
 
-    public static void IsNotNull(object actual)
+    public static void IsNotNull(object? actual)
     {
         if (actual == null)
         {
