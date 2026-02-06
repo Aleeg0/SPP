@@ -54,20 +54,27 @@ public class TestLauncher
         var testCleanupMethod = testClass.GetMethods()
             .SingleOrDefault(m => m.GetCustomAttribute<TestCleanupAttribute>() != null);
 
-        classInitializeMethod?.Invoke(null, null);
+        try
+        {
+            classInitializeMethod?.Invoke(null, null);
 
-        var methods = testClass.GetMethods()
-            .Where(m => m.GetCustomAttribute<TestMethodAttribute>() != null)
-            .ToList();
+            var methods = testClass.GetMethods()
+                .Where(m => m.GetCustomAttribute<TestMethodAttribute>() != null)
+                .ToList();
 
-        methods.ForEach(m => RunTestMethod(instance, m, testInitializeMethod, testCleanupMethod));
+            methods.ForEach(m => RunTestMethod(instance, m, testInitializeMethod, testCleanupMethod));
 
-        var classCleanupMethod = testClass.GetMethods(BindingFlags.Static | BindingFlags.Public)
-            .SingleOrDefault(m => m.GetCustomAttribute<ClassCleanupAttribute>() != null);
+            var classCleanupMethod = testClass.GetMethods(BindingFlags.Static | BindingFlags.Public)
+                .SingleOrDefault(m => m.GetCustomAttribute<ClassCleanupAttribute>() != null);
 
-        classCleanupMethod?.Invoke(null, null);
+            classCleanupMethod?.Invoke(null, null);
 
-        Console.WriteLine();
+            Console.WriteLine();
+        }
+        catch (Exception ex)
+        {
+            HandleTestException(ex);
+        }
     }
 
     private void RunTestMethod(object instance, MethodInfo method, MethodInfo? init, MethodInfo? cleanup)
