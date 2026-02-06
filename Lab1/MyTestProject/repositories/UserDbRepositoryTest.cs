@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using MyProject.configs;
 using MyProject.dtos;
+using MyProject.entities;
 using MyProject.repositories.Implementations;
 using MyTest;
 using MyTest.attributes;
@@ -105,5 +106,12 @@ public class UserDbRepositoryTests
         var all = await _repository.GetAllAsync();
         Assert.AreEqual(1, all.Count);
         Assert.AreEqual(_userLogin, all[0].Login);
+    }
+
+    [TestMethod]
+    public async Task Step6_UpdateNotExistUser_ShouldThrowException()
+    {
+        var testUser = new User(52,"login", "password");
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => _repository.UpdateAsync(testUser));
     }
 }
