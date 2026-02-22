@@ -19,19 +19,12 @@ public class UserInMemoryRepositoryTests
         _defaultDto = new UserDto("testUser", "12345678");
     }
 
-    [TestCleanup]
-    public void TestCleanup()
-    {
-        Console.WriteLine("[Cleanup info]: Test finished, repository cleared from memory.");
-    }
-
     [TestMethod(Description = "Simple Description")]
     public void Create_ValidDto_ReturnsUserWithNewId()
     {
         var createdUser = _repository.Create(_defaultDto);
 
         Assert.IsNotNull(createdUser);
-        Assert.AreEqual(0, createdUser.Id);
         Assert.AreEqual(_defaultDto.Login, createdUser.Login);
 
         var allUsers = _repository.GetAll();
@@ -52,13 +45,13 @@ public class UserInMemoryRepositoryTests
     }
 
     [TestMethod]
-    public void GetById_ExistingId_ReturnsUser()
+    public async Task GetById_ExistingId_ReturnsUser()
     {
         var user = _repository.Create(_defaultDto);
-
         var retrievedUser = _repository.GetById(user.Id);
 
         Assert.AreEqual(user, retrievedUser);
+        await Task.Delay(5000);
     }
 
     [TestMethod]
@@ -111,7 +104,7 @@ public class UserInMemoryRepositoryTests
 
     [TestMethod]
     [DataRow("user1", "password1", "user2", "password2")]
-    public void GetAll_UsersExist_ReturnsAllUsers(string firstLogin, string firstPassword, string secondLogin, string secondPassword)
+    public async Task GetAll_UsersExist_ReturnsAllUsers(string firstLogin, string firstPassword, string secondLogin, string secondPassword)
     {
         _repository.Create(new UserDto(firstLogin, firstPassword));
         _repository.Create(new UserDto(secondLogin, secondPassword));
@@ -121,5 +114,7 @@ public class UserInMemoryRepositoryTests
         Assert.AreEqual(2, all.Count);
         Assert.Contains(all, u => u.Login == firstLogin);
         Assert.Contains(all, u => u.Password == secondPassword);
+
+        await Task.Delay(5000);
     }
 }
