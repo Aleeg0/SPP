@@ -34,24 +34,6 @@ public class TestLauncher
         string className = testClass.Name;
         _logger.Print($"--- Class testing: {className} ---");
 
-        object? instance;
-
-        try
-        {
-            instance = Activator.CreateInstance(testClass);
-        }
-        catch (Exception ex)
-        {
-            _logger.Print($"[CRITICAL] Failed to create test class {className}: {ex.Message}");
-            return;
-        }
-
-        if (instance == null)
-        {
-            _logger.Print($"[CRITICAL] Failed to find test class {className}");
-            return;
-        }
-
         var classInitializeMethod = testClass.GetMethods(BindingFlags.Static | BindingFlags.Public)
             .SingleOrDefault(m => m.GetCustomAttribute<ClassInitializeAttribute>() != null);
 
@@ -79,6 +61,14 @@ public class TestLauncher
 
         if (isNonParallelizable)
         {
+            var instance = CreateInstance(testClass);
+
+            if (instance == null)
+            {
+                _logger.Print($"[CRITICAL] Failed to find test class {className}");
+                return;
+            }
+
             foreach (var method in methods)
             {
                 await RunTestMethodAsync(instance, method, testInitializeMethod, testCleanupMethod);
@@ -87,7 +77,7 @@ public class TestLauncher
         else
         {
             var tasks = methods.Select(m =>
-                RunMethodWithSemaphoreAsync(instance, m, testInitializeMethod, testCleanupMethod)
+                RunMethodWithSemaphoreAsync(testClass, m, testInitializeMethod, testCleanupMethod)
             ).ToList();
 
             await Task.WhenAll(tasks);
@@ -101,11 +91,19 @@ public class TestLauncher
         _logger.Print("");
     }
 
-    private async Task RunMethodWithSemaphoreAsync(object instance, MethodInfo method, MethodInfo? init, MethodInfo? cleanup)
+    private async Task RunMethodWithSemaphoreAsync(Type testClass, MethodInfo method, MethodInfo? init, MethodInfo? cleanup)
     {
         await _semaphore.WaitAsync();
         try
         {
+            var instance = CreateInstance(testClass);
+
+            if (instance == null)
+            {
+                _logger.Print($"[CRITICAL] Failed to find test class {testClass}");
+                return;
+            }
+
             await Task.Run(() => RunTestMethodAsync(instance, method, init, cleanup));
         }
         finally
@@ -202,6 +200,14 @@ public class TestLauncher
 
             _logger.PrintSuccess(testInfo);
         }
+        catch (TestFailedException ex)
+        {
+            _logger.PrintFailed(testInfo, ex.Message);
+        }
+        catch (TestTimeoutException ex)
+        {
+            _logger.PrintFailed(testInfo, ex.Message);
+        }
         catch (TargetInvocationException ex)
         {
             var testException = ex.InnerException;
@@ -209,7 +215,6 @@ public class TestLauncher
             {
                 _logger.PrintFailed(testInfo, testException.Message);
             }
-
         }
         catch (Exception ex)
         {
@@ -224,5 +229,22 @@ public class TestLauncher
         {
             await task;
         }
+    }
+
+    private object? CreateInstance(Type testClass)
+    {
+        object? instance;
+
+        try
+        {
+            instance = Activator.CreateInstance(testClass);
+        }
+        catch (Exception ex)
+        {
+            _logger.Print($"[CRITICAL] Failed to create test class {testClass}: {ex.Message}");
+            return null;
+        }
+
+        return instance;
     }
 }

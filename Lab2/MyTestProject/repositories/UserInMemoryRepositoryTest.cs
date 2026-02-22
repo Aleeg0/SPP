@@ -74,8 +74,10 @@ public class UserInMemoryRepositoryTests
     }
 
     [TestMethod]
-    public void Update_NonExistingUser_ThrowsKeyNotFoundException()
+    [Timeout(1000)]
+    public async Task Update_NonExistingUser_ThrowsKeyNotFoundException()
     {
+        await Task.Delay(5000);
         var fakeUser = new User(999, "fake", "fake");
         Assert.Throws<KeyNotFoundException>(() => _repository.Update(fakeUser));
     }
