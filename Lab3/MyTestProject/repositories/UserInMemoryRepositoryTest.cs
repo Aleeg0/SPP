@@ -59,6 +59,7 @@ public class UserInMemoryRepositoryTests
     {
         var result = _repository.GetById(999);
         Assert.IsNull(result);
+        throw new Exception("This shouldn't happen");
     }
 
     [TestMethod]

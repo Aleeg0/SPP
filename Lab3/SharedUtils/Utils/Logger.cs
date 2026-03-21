@@ -1,13 +1,7 @@
-using MyTest.exceptions;
+namespace SharedUtils.Utils;
 
-namespace MyTestLauncher.Utils;
-
-public class Logger
+public class Logger : ILogger
 {
-    // private const ConsoleColor SuccessColor = ConsoleColor.Green;
-    // private const ConsoleColor TestErrorColor = ConsoleColor.Red;
-    // private const ConsoleColor CriticalErrorColor = ConsoleColor.DarkRed;
-    // private const ConsoleColor SkippedColor = ConsoleColor.Cyan;
     private readonly Lock _consoleLock = new();
 
     public ConsoleColor SuccessColor { get; init; } = ConsoleColor.Green;

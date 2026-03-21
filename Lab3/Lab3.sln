@@ -8,7 +8,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyProject", "MyProject\MyPr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyTestProject", "MyTestProject\MyTestProject.csproj", "{E938E13B-3693-41DA-85D6-BAAE979E7617}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyThreadPool", "MyThreadPool\MyThreadPool.csproj", "{5092F961-70B0-4D13-89E1-53E033A02B5D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ThreadPoolLib", "ThreadPoolLib\ThreadPoolLib.csproj", "{5092F961-70B0-4D13-89E1-53E033A02B5D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharedUtils", "SharedUtils\SharedUtils.csproj", "{BCDED008-E58A-4EE5-9CCF-A632524C4150}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -36,5 +38,9 @@ Global
 		{5092F961-70B0-4D13-89E1-53E033A02B5D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5092F961-70B0-4D13-89E1-53E033A02B5D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5092F961-70B0-4D13-89E1-53E033A02B5D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BCDED008-E58A-4EE5-9CCF-A632524C4150}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BCDED008-E58A-4EE5-9CCF-A632524C4150}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BCDED008-E58A-4EE5-9CCF-A632524C4150}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BCDED008-E58A-4EE5-9CCF-A632524C4150}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

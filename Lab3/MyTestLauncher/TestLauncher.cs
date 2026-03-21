@@ -1,21 +1,26 @@
 using System.Reflection;
 using MyTest.attributes;
 using MyTest.exceptions;
-using MyTestLauncher.Utils;
+using SharedUtils.Utils;
+using ThreadPoolLib;
 
 namespace MyTestLauncher;
 
-public class TestLauncher
+public class TestLauncher : IDisposable
 {
-    private readonly Logger _logger = new ();
-    private readonly SemaphoreSlim _semaphore;
+    private readonly ILogger _logger;
+    private readonly MyThreadPool _threadPool;
 
-    public TestLauncher(int maxDegreeOfParallelism = 4)
+    public TestLauncher(ILogger logger, int minThreads = 2, int maxThreads = 4)
     {
-        _semaphore = new SemaphoreSlim(maxDegreeOfParallelism);
+        _logger = logger;
+        _threadPool = new MyThreadPool(minThreads, maxThreads, 5000, 10000)
+        {
+            Logger = logger
+        };
     }
 
-    public async Task LaunchTestAsync(Assembly assembly)
+    public void LaunchTest(Assembly assembly)
     {
         var assemblyName = assembly.GetName().Name;
         _logger.Print($"=== Launch tests from assembly: {assemblyName} ===\n");
@@ -25,11 +30,11 @@ public class TestLauncher
 
         foreach (var testClass in testClasses)
         {
-            await RunTestClassAsync(testClass);
+            RunTestClass(testClass);
         }
     }
 
-    private async Task RunTestClassAsync(Type testClass)
+    private void RunTestClass(Type testClass)
     {
         string className = testClass.Name;
         _logger.Print($"--- Class testing: {className} ---");
@@ -71,48 +76,34 @@ public class TestLauncher
 
             foreach (var method in methods)
             {
-                await RunTestMethodAsync(instance, method, testInitializeMethod, testCleanupMethod);
+                RunTestMethod(instance, method, testInitializeMethod, testCleanupMethod);
             }
         }
         else
         {
-            var tasks = methods.Select(m =>
-                RunMethodWithSemaphoreAsync(testClass, m, testInitializeMethod, testCleanupMethod)
-            ).ToList();
+            using var countdown = new CountdownEvent(methods.Count);
 
-            await Task.WhenAll(tasks);
-        }
-
-        var classCleanupMethod = testClass.GetMethods(BindingFlags.Static | BindingFlags.Public)
-            .SingleOrDefault(m => m.GetCustomAttribute<ClassCleanupAttribute>() != null);
-
-        classCleanupMethod?.Invoke(null, null);
-
-        _logger.Print("");
-    }
-
-    private async Task RunMethodWithSemaphoreAsync(Type testClass, MethodInfo method, MethodInfo? init, MethodInfo? cleanup)
-    {
-        await _semaphore.WaitAsync();
-        try
-        {
-            var instance = CreateInstance(testClass);
-
-            if (instance == null)
+            foreach (var method in methods)
             {
-                _logger.Print($"[CRITICAL] Failed to find test class {testClass}");
-                return;
+                _threadPool.EnqueueTask(() =>
+                {
+                    try
+                    {
+                        var instance = CreateInstance(testClass);
+                        RunTestMethod(instance, method, testInitializeMethod, testCleanupMethod);
+                    }
+                    finally
+                    {
+                        countdown.Signal();
+                    }
+                });
             }
 
-            await Task.Run(() => RunTestMethodAsync(instance, method, init, cleanup));
-        }
-        finally
-        {
-            _semaphore.Release();
+            countdown.Wait();
         }
     }
 
-    private async Task RunTestMethodAsync(object instance, MethodInfo method, MethodInfo? init, MethodInfo? cleanup)
+    private void RunTestMethod(object instance, MethodInfo method, MethodInfo? init, MethodInfo? cleanup)
     {
         try
         {
@@ -126,11 +117,11 @@ public class TestLauncher
 
         try
         {
-            await ExecuteTestMethod(instance, method);
+            ExecuteTestMethod(instance, method);
         }
         catch (Exception ex)
         {
-            _logger.Print($"[ERROR]: {method.Name}: {ex.Message}");
+            _logger.PrintCrashed(method.Name, ex);
         }
         finally
         {
@@ -145,7 +136,7 @@ public class TestLauncher
         }
     }
 
-    private async Task ExecuteTestMethod(object instance, MethodInfo method)
+    private void ExecuteTestMethod(object instance, MethodInfo method)
     {
         var dataRows = method.GetCustomAttributes<DataRowAttribute>().ToList();
 
@@ -159,17 +150,17 @@ public class TestLauncher
                 }
                 else
                 {
-                    await InvokeTestAsync(instance, method, dataRow.Values);
+                    InvokeTest(instance, method, dataRow.Values);
                 }
             }
         }
         else
         {
-            await InvokeTestAsync(instance, method, null);
+            InvokeTest(instance, method, null);
         }
     }
 
-    private async Task InvokeTestAsync(object instance, MethodInfo method, object[]? args)
+    private void InvokeTest(object instance, MethodInfo method, object[]? args)
     {
         var dataRows = method.GetCustomAttributes<TestMethodAttribute>().FirstOrDefault()!;
         var descriptionString = dataRows.Description != null ? $"({dataRows.Description})" : "";
@@ -181,21 +172,18 @@ public class TestLauncher
         {
             if (timeoutAttr != null)
             {
-                var testTask = InvokeAsync(instance, method, args);
-                var delayTask = Task.Delay(timeoutAttr.Milliseconds);
+                var testTask = Task.Run(() => Invoke(instance, method, args));
 
-                var completedTask = await Task.WhenAny(testTask, delayTask);
-
-                if (completedTask == delayTask)
+                if (!testTask.Wait(timeoutAttr.Milliseconds))
                 {
                     throw new TestTimeoutException(timeoutAttr.Milliseconds);
                 }
 
-                await testTask;
+                testTask.GetAwaiter().GetResult();
             }
             else
             {
-                await InvokeAsync(instance, method, args);
+                Invoke(instance, method, args);
             }
 
             _logger.PrintSuccess(testInfo);
@@ -215,6 +203,10 @@ public class TestLauncher
             {
                 _logger.PrintFailed(testInfo, testException.Message);
             }
+            else if (testException != null)
+            {
+                throw testException;
+            }
         }
         catch (Exception ex)
         {
@@ -222,12 +214,13 @@ public class TestLauncher
         }
     }
 
-    private async Task InvokeAsync(object instance, MethodInfo method, object[]? args)
+    private void Invoke(object instance, MethodInfo method, object[]? args)
     {
         object? result = method.Invoke(instance, args);
+
         if (result is Task task)
         {
-            await task;
+            task.GetAwaiter().GetResult();
         }
     }
 
@@ -246,5 +239,10 @@ public class TestLauncher
         }
 
         return instance;
+    }
+
+    public void Dispose()
+    {
+        _threadPool.Dispose();
     }
 }

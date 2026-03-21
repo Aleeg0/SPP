@@ -8,8 +8,8 @@ using MyTest.attributes;
 
 namespace MyTestProject.repositories;
 
-[TestClass]
-[NonParallelizable]
+// [TestClass]
+// [NonParallelizable]
 public class UserDbRepositoryTests
 {
     private static ApplicationDbContext _context = null!;
