@@ -2,6 +2,7 @@
 using System.Reflection;
 using MyTestLauncher;
 using SharedUtils.Utils;
+using ThreadPoolLib;
 
 var testAssembly = Assembly.LoadFrom("MyTestProject.dll");
 var logger = new Logger();
@@ -39,5 +40,37 @@ Console.WriteLine($"\n>>> Время выполнения (4 потока): {par
 Console.WriteLine("=================================================");
 Console.WriteLine("                 ИТОГИ");
 Console.WriteLine("=================================================");
-//Console.WriteLine($"Последовательно: {sequentialTime.TotalSeconds:F3} с");
+Console.WriteLine($"Последовательно: {sequentialTime.TotalSeconds:F3} с");
 Console.WriteLine($"Параллельно:     {parallelTime.TotalSeconds:F3} с");
+
+
+
+
+
+void SimulateTest(int testId)
+{
+    logger.Print($"[TEST] Запуск теста #{testId} в потоке {Thread.CurrentThread.ManagedThreadId}...", ConsoleColor.Cyan);
+    int workTime = new Random().Next(1000, 2000);
+    Thread.Sleep(workTime);
+    logger.Print($"[TEST] Тест #{testId} успешно завершен за {workTime} мс.", ConsoleColor.Green);
+}
+
+
+var pool = new MyThreadPool(0, 5, 3000, 5000) { Logger = logger };
+
+Console.WriteLine("\n--- 1. Единичные подачи (Пул работает на MinThreads) ---");
+pool.EnqueueTask(() => SimulateTest(1));
+Thread.Sleep(1000);
+pool.EnqueueTask(() => SimulateTest(2));
+
+Console.WriteLine("\n--- 2. Интервал бездействия (Ждем адаптивного сжатия) ---");
+Thread.Sleep(5000);
+
+Console.WriteLine("\n--- 3. Пиковая нагрузка (Пул должен расшириться до MaxThreads) ---");
+for (int i = 0; i < 50; i++)
+{
+    int taskId = i;
+    pool.EnqueueTask(() => SimulateTest(taskId + 10));
+}
+
+Thread.Sleep(10000);

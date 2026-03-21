@@ -17,7 +17,7 @@ public class MyThreadPool : IDisposable
     private bool _isDisposed = false;
     public ILogger? Logger { get; init; }
 
-    public MyThreadPool(int minThreads = 1, int maxThreads = 1, int threadIdleTimeout = 5000, int taskMaxDuration = 5000)
+    public MyThreadPool(int minThreads, int maxThreads, int threadIdleTimeout, int taskMaxDuration)
     {
         MinThreads = minThreads;
         MaxThreads = maxThreads;
@@ -106,7 +106,7 @@ public class MyThreadPool : IDisposable
 
                 while ((stuckWorker = _workers.FirstOrDefault(w =>
                            w.ExecuteTime.HasValue &&
-                           (DateTime.Now - w.ExecuteTime.Value).TotalSeconds > _taskMaxDuration)) != null)
+                           (DateTime.Now - w.ExecuteTime.Value).TotalMilliseconds > _taskMaxDuration)) != null)
                 {
                     Logger?.Print($"[POOL] Worker #{stuckWorker.Id} is STUCK. Replacing...", ConsoleColor.Red);
                     _workers.Remove(stuckWorker);
@@ -119,7 +119,7 @@ public class MyThreadPool : IDisposable
                     }
                 }
             }
-            Thread.Sleep(_threadIdleTimeout / 5);
+            Thread.Sleep(_taskMaxDuration / 5);
         }
     }
 
