@@ -55,6 +55,19 @@ void SimulateTest(int testId)
     logger.Print($"[TEST] Тест #{testId} успешно завершен за {workTime} мс.", ConsoleColor.Green);
 }
 
+void SimulateStuckTest(int testId, int workTimeMs)
+{
+    logger.Print($"[TEST] Запуск ДОЛГОГО теста #{testId} в потоке {Thread.CurrentThread.ManagedThreadId} (ожидание {workTimeMs}мс)...", ConsoleColor.DarkYellow);
+    Thread.Sleep(workTimeMs);
+    logger.Print($"[TEST] ДОЛГИЙ тест #{testId} отвис и завершен.", ConsoleColor.DarkYellow);
+}
+
+void SimulateExceptionTest(int testId)
+{
+    logger.Print($"[TEST] Запуск теста с ОШИБКОЙ #{testId} в потоке {Thread.CurrentThread.ManagedThreadId}...", ConsoleColor.Magenta);
+    Thread.Sleep(500);
+    throw new InvalidOperationException($"Специальная ошибка в тесте #{testId}");
+}
 
 var pool = new MyThreadPool(0, 5, 3000, 5000) { Logger = logger };
 
@@ -72,5 +85,28 @@ for (int i = 0; i < 50; i++)
     int taskId = i;
     pool.EnqueueTask(() => SimulateTest(taskId + 10));
 }
+Thread.Sleep(10000);
+
+Console.WriteLine("\n--- 4. Зависшие задачи (Пул должен выявить STUCK и заменить воркеры) ---");
+for (int i = 0; i < 3; i++)
+{
+    int taskId = i + 100;
+    pool.EnqueueTask(() => SimulateStuckTest(taskId, 8000));
+}
 
 Thread.Sleep(10000);
+
+
+Console.WriteLine("\n--- 5. Задачи с исключениями (Пул не должен упасть) ---");
+for (int i = 0; i < 3; i++)
+{
+    int taskId = i + 200;
+    pool.EnqueueTask(() => SimulateExceptionTest(taskId));
+}
+
+pool.EnqueueTask(() => SimulateTest(999));
+
+Thread.Sleep(5000);
+
+pool.Dispose();
+Console.WriteLine("\n--- Тестирование завершено ---");
