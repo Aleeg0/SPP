@@ -17,7 +17,7 @@ public class TestLauncher : IDisposable
         _threadPool = new MyThreadPool(minThreads, maxThreads, 2000, 5000);
     }
 
-    public void LaunchTest(Assembly assembly)
+    public void LaunchTest(Assembly assembly, Predicate<MethodInfo>? filter = null)
     {
         var assemblyName = assembly.GetName().Name;
         _logger.Print($"=== Launch tests from assembly: {assemblyName} ===\n");
@@ -27,11 +27,11 @@ public class TestLauncher : IDisposable
 
         foreach (var testClass in testClasses)
         {
-            RunTestClass(testClass);
+            RunTestClass(testClass, filter);
         }
     }
 
-    private void RunTestClass(Type testClass)
+    private void RunTestClass(Type testClass, Predicate<MethodInfo>? filter = null)
     {
         string className = testClass.Name;
         _logger.Print($"--- Class testing: {className} ---");
@@ -57,6 +57,7 @@ public class TestLauncher : IDisposable
 
         var methods = testClass.GetMethods()
             .Where(m => m.GetCustomAttribute<TestMethodAttribute>() != null)
+            .Where(m => filter == null || filter(m))
             .ToList();
 
         bool isNonParallelizable = testClass.GetCustomAttribute<NonParallelizableAttribute>() != null;

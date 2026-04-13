@@ -26,6 +26,7 @@ public class UserInMemoryRepositoryTests
     }
 
     [TestMethod(Description = "Simple Description")]
+    [Category("Main")]
     public void Create_ValidDto_ReturnsUserWithNewId()
     {
         var createdUser = _repository.Create(_defaultDto);
@@ -49,6 +50,7 @@ public class UserInMemoryRepositoryTests
     }
 
     [TestMethod]
+    [Category("Main")]
     public async Task GetById_ExistingId_ReturnsUser()
     {
         var user = _repository.Create(_defaultDto);
