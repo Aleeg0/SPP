@@ -14,10 +14,7 @@ public class TestLauncher : IDisposable
     public TestLauncher(ILogger logger, int minThreads = 2, int maxThreads = 4)
     {
         _logger = logger;
-        _threadPool = new MyThreadPool(minThreads, maxThreads, 2000, 5000)
-        {
-            Logger = logger
-        };
+        _threadPool = new MyThreadPool(minThreads, maxThreads, 2000, 5000);
     }
 
     public void LaunchTest(Assembly assembly)

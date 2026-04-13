@@ -6,6 +6,7 @@ using ThreadPoolLib;
 
 var testAssembly = Assembly.LoadFrom("MyTestProject.dll");
 var logger = new Logger();
+ConsoleColor loggerColor = ConsoleColor.DarkGray;
 
 Console.WriteLine("=================================================");
 Console.WriteLine("   Сравнение производительности: 1 поток vs 4 потока");
@@ -68,7 +69,12 @@ void SimulateExceptionTest(int testId)
     throw new InvalidOperationException($"Специальная ошибка в тесте #{testId}");
 }
 
-var pool = new MyThreadPool(0, 5, 3000, 5000) { Logger = logger };
+
+var pool = new MyThreadPool(0, 5, 3000, 5000);
+pool.OnIdleTimeout += worker => logger.Print($"[POOL] Worker #{worker.Id} removed due to idle.", loggerColor);
+pool.OnTaskComplete += worker => logger.Print($"[POOL] Worker #{worker.Id} complete task.", loggerColor);
+pool.OnTaskStuck += worker => logger.Print($"[POOL] Worker #{worker.Id} is STUCK. Replacing...", ConsoleColor.Red);
+pool.OnMonitorWake += (workers, taskCount) => logger.Print($"[POOL] Workers: {workers.Count} | ActiveWorkers: {workers.Count(w => w.IsExecuting)} | Tasks: {taskCount}", loggerColor);
 
 Console.WriteLine("\n--- 1. Единичные подачи (Пул работает на MinThreads) ---");
 pool.EnqueueTask(() => SimulateTest(1));

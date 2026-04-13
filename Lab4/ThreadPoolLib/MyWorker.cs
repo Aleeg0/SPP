@@ -69,7 +69,7 @@ public class MyWorker
                     if (!Monitor.Wait(_taskLock, _threadIdleTimeout))
                     {
                         isIdle = true;
-                        break; // Выходим из цикла, чтобы отпустить лок перед вызовом события!
+                        break;
                     }
                     if (_isStopped) return;
                 }

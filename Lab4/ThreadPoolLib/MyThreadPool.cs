@@ -1,11 +1,7 @@
-﻿using SharedUtils.Utils;
-
-namespace ThreadPoolLib;
+﻿namespace ThreadPoolLib;
 
 public class MyThreadPool : IDisposable
 {
-    private const ConsoleColor LoggerColor = ConsoleColor.DarkGray;
-
     private readonly List<MyWorker> _workers = new ();
     private readonly Queue<Action> _tasks = new ();
 
@@ -15,7 +11,11 @@ public class MyThreadPool : IDisposable
     private readonly int _taskMaxDuration;
     private readonly object _lock = new();
     private bool _isDisposed = false;
-    public ILogger? Logger { get; init; }
+
+    public event Action<EventWorker>? OnIdleTimeout;
+    public event Action<EventWorker>? OnTaskComplete;
+    public event Action<EventWorker>? OnTaskStuck;
+    public event Action<List<EventWorker>, int>? OnMonitorWake;
 
     public MyThreadPool(int minThreads, int maxThreads, int threadIdleTimeout, int taskMaxDuration)
     {
@@ -72,7 +72,7 @@ public class MyThreadPool : IDisposable
             {
                 worker.Stop();
                 _workers.Remove(worker);
-                Logger?.Print($"[POOL] Worker #{worker.Id} removed due to idle.", LoggerColor);
+                OnIdleTimeout?.Invoke(new EventWorker(worker.Id, worker.IsExecuting, worker.HasTask));
             }
         }
 
@@ -80,8 +80,7 @@ public class MyThreadPool : IDisposable
 
     private void OnWorkerTaskComplete(MyWorker worker)
     {
-        Logger?.Print($"[POOL] Worker #{worker.Id} complete task.", LoggerColor);
-        Logger?.Print($"[POOL] Workers: {_workers.Count} | ActiveWorkers: {_workers.Count(w => w.IsExecuting)} | Tasks: {_tasks.Count}", LoggerColor);
+        OnTaskComplete?.Invoke(new EventWorker(worker.Id, worker.IsExecuting, worker.HasTask));
         lock (_lock)
         {
             if (_tasks.TryDequeue(out var task))
@@ -99,16 +98,17 @@ public class MyThreadPool : IDisposable
     {
         while (!_isDisposed)
         {
-            Logger?.Print($"[POOL] Workers: {_workers.Count} | ActiveWorkers: {_workers.Count(w => w.IsExecuting)} | Tasks: {_tasks.Count}", LoggerColor);
+            OnMonitorWake?.Invoke(
+                _workers.Select(w => new EventWorker(w.Id, w.IsExecuting, w.HasTask)).ToList(),
+                _tasks.Count
+            );
             lock (_lock)
             {
-                MyWorker? stuckWorker;
-
-                while ((stuckWorker = _workers.FirstOrDefault(w =>
+                while (_workers.FirstOrDefault(w =>
                            w.ExecuteTime.HasValue &&
-                           (DateTime.Now - w.ExecuteTime.Value).TotalMilliseconds > _taskMaxDuration)) != null)
+                           (DateTime.Now - w.ExecuteTime.Value).TotalMilliseconds > _taskMaxDuration) is { } stuckWorker)
                 {
-                    Logger?.Print($"[POOL] Worker #{stuckWorker.Id} is STUCK. Replacing...", ConsoleColor.Red);
+                    OnTaskStuck?.Invoke(new EventWorker(stuckWorker.Id, stuckWorker.IsExecuting, stuckWorker.HasTask));
                     _workers.Remove(stuckWorker);
                     var newWorker = CreateAndStartWorker();
                     _workers.Add(newWorker);
