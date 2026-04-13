@@ -2,7 +2,7 @@ version: '3.9'
 
 services:
   postgres-test:
-    image: postgres:17-alpine3.23
+    image: postgres:latest
     container_name: test-postgres
     environment:
       POSTGRES_DB: Test
