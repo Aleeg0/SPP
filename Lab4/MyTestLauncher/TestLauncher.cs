@@ -138,25 +138,24 @@ public class TestLauncher : IDisposable
 
     private void ExecuteTestMethod(object instance, MethodInfo method)
     {
-        var dataRows = method.GetCustomAttributes<DataRowAttribute>().ToList();
+        var dataSourceAttr = method.GetCustomAttribute<DataSourceAttribute>();
 
-        if (dataRows.Count != 0)
-        {
-            foreach (var dataRow in dataRows)
-            {
-                if (dataRow.IgnoreMessage != null)
-                {
-                    _logger.PrintSkipped(method.Name, dataRow.IgnoreMessage);
-                }
-                else
-                {
-                    InvokeTest(instance, method, dataRow.Values);
-                }
-            }
-        }
-        else
+        if (dataSourceAttr == null)
         {
             InvokeTest(instance, method, null);
+            return;
+        }
+
+        var sourceMethod = instance.GetType().GetMethod(dataSourceAttr.MethodName, BindingFlags.Static | BindingFlags.Public);
+
+        if (sourceMethod == null)
+            throw new Exception($"Method {dataSourceAttr.MethodName} not found");
+
+        var dataRowsGen = (IEnumerable<object[]>)sourceMethod.Invoke(null, null)!;
+
+        foreach (var args in dataRowsGen)
+        {
+            InvokeTest(instance, method, args);
         }
     }
 

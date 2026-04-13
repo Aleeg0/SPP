@@ -19,6 +19,12 @@ public class UserInMemoryRepositoryTests
         _defaultDto = new UserDto("testUser", "12345678");
     }
 
+    public static IEnumerable<object[]> GetUserData()
+    {
+        yield return ["user1", "pass1"];
+        yield return ["user2", "pass2"];
+    }
+
     [TestMethod(Description = "Simple Description")]
     public void Create_ValidDto_ReturnsUserWithNewId()
     {
@@ -32,9 +38,7 @@ public class UserInMemoryRepositoryTests
     }
 
     [TestMethod]
-    [DataRow("testUser1", "secretPassword")]
-    [DataRow("admin", "verySecretPassword", IgnoreMessage = "Skipping this DataRow")]
-    [DataRow("admin2", "verySecretPassword2")]
+    [DataSource(nameof(GetUserData))]
     public void Create_VariousInputs_PopulatesFieldsCorrectly(string login, string password)
     {
         var dto = new UserDto(login, password);
