@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.Linq.Expressions;
 using MyTest.exceptions;
 
 namespace MyTest;
@@ -29,12 +30,76 @@ public static class Assert
         }
     }
 
+    public static void IsTrue(Expression<Func<bool>> expression)
+    {
+        var compiled = expression.Compile();
+        if (compiled.Invoke()) return;
+
+        if (expression.Body is BinaryExpression binaryExpr)
+        {
+            var leftCompiled = Expression.Lambda(binaryExpr.Left).Compile();
+            var leftValue = leftCompiled.DynamicInvoke();
+
+            var rightCompiled = Expression.Lambda(binaryExpr.Right).Compile();
+            var rightValue = rightCompiled.DynamicInvoke();
+
+            string op = binaryExpr.NodeType switch
+            {
+                ExpressionType.Equal => "==",
+                ExpressionType.NotEqual => "!=",
+                ExpressionType.GreaterThan => ">",
+                ExpressionType.LessThan => "<",
+                _ => binaryExpr.NodeType.ToString()
+            };
+
+            throw new TestFailedException(
+                $"Expression failed:\n" +
+                $"Left operand: {leftValue}\n" +
+                $"Right operand: {rightValue}\n" +
+                $"Operator: {op}");
+        }
+
+        throw new TestFailedException($"Expression failed: {expression.Body}");
+    }
+
     public static void IsFalse(bool condition)
     {
         if (condition)
         {
             throw new TestFailedException("Assert.IsFalse failed.");
         }
+    }
+
+    public static void IsFalse(Expression<Func<bool>> expression)
+    {
+        var compiled = expression.Compile();
+        if (!compiled.Invoke()) return;
+
+        if (expression.Body is BinaryExpression binaryExpr)
+        {
+            var leftCompiled = Expression.Lambda(binaryExpr.Left).Compile();
+            var leftValue = leftCompiled.DynamicInvoke();
+
+            var rightCompiled = Expression.Lambda(binaryExpr.Right).Compile();
+            var rightValue = rightCompiled.DynamicInvoke();
+
+            string op = binaryExpr.NodeType switch
+            {
+                ExpressionType.Equal => "==",
+                ExpressionType.NotEqual => "!=",
+                ExpressionType.GreaterThan => ">",
+                ExpressionType.LessThan => "<",
+                _ => binaryExpr.NodeType.ToString()
+            };
+
+            throw new TestFailedException(
+                $"Expression failed: {expression.Body}\n" +
+                $"Left operand: {leftValue}\n" +
+                $"Right operand: {rightValue}\n" +
+                $"Operator: {op}");
+        }
+
+        throw new TestFailedException($"Expression failed: {expression.Body}");
     }
 
     public static void Contains(object expected, IEnumerable collection)

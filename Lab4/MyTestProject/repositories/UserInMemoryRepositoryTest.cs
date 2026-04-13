@@ -50,7 +50,6 @@ public class UserInMemoryRepositoryTests
     }
 
     [TestMethod]
-    [Category("Main")]
     public async Task GetById_ExistingId_ReturnsUser()
     {
         var user = _repository.Create(_defaultDto);
@@ -100,13 +99,14 @@ public class UserInMemoryRepositoryTests
     }
 
     [TestMethod]
+    [Category("Main")]
     public void Delete_NonExistingId_ReturnsFalse()
     {
         var user = _repository.Create(_defaultDto);
         var notExistedUserId = user.Id + 1;
         var result = _repository.Delete(notExistedUserId);
 
-        Assert.IsFalse(result);
+        Assert.IsTrue(() => result == true);
         Assert.Contains(user, _repository.GetAll());
     }
 
